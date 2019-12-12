@@ -83,7 +83,6 @@ airflow test DAG_ID TASK_ID EXECUTION_DATE
 ```
 
 ## DAG
-
 Nenhum processamento de dados real deve ocorrer nos arquivos DAG.
 
  É essencial manter os arquivos DAG muito leves (como um arquivo de configuração), para que leve menos tempo e recursos para o planejador do Airflow processá-los a cada pulsação .
@@ -106,7 +105,6 @@ default_args = {
 ```
 
 ### Task Dependency
-
 ```
 # Task B depends on Task A and Task C depends on Task B
 task_a >> task_b >> task_c
@@ -136,6 +134,142 @@ dag = DAG ('sample_dag', default_args = default_args, schedule_interval = '0 7 *
 ```
 - `start_date` não é necessariamente primeira execução do DAG seria acionada. É só uma referencia para o scheduler saber aonde começa.
 - Então, a partir do exemplo, A primeira execução do DAG seria acionada após as 07:00 de 2019-12-06, no final de seu período de programação, em vez de na data de início.
+
+## Complete DAG
+
+```Python
+"""
+Code that goes along with the Airflow tutorial located at:
+https://github.com/apache/incubator-airflow/blob/master/airflow/example_dags/tutorial.py
+"""
+from airflow import DAG
+from airflow.operators.bash_operator import BashOperator
+from datetime import datetime, timedelta
+
+
+default_args = {
+    'owner': 'airflow',
+    'depends_on_past': False,
+    'start_date': datetime(2015, 6, 1),
+    'email': ['airflow@example.com'],
+    'email_on_failure': False,
+    'email_on_retry': False,
+    'retries': 1,
+    'retry_delay': timedelta(minutes=5),
+    # 'queue': 'bash_queue',
+    # 'pool': 'backfill',
+    # 'priority_weight': 10,
+    # 'end_date': datetime(2016, 1, 1),
+}
+
+dag = DAG(
+    'tutorial', 
+    default_args=dag_test_bash_python, 
+    schedule_interval=timedelta(days=1))
+
+# t1, t2 and t3 are examples of tasks 
+# created by instantiating operators
+t1 = BashOperator(
+    task_id='print_date',
+    bash_command='date',
+    dag=dag)
+
+t2 = BashOperator(
+    task_id='sleep',
+    bash_command='sleep 5',
+    retries=3,
+    dag=dag)
+
+templated_command = """
+    {% for i in range(5) %}
+        echo "{{ ds }}"
+        echo "{{ macros.ds_add(ds, 7)}}"
+        echo "{{ params.my_param }}"
+    {% endfor %}
+"""
+
+t3 = BashOperator(
+    task_id='templated',
+    bash_command=templated_command,
+    params={'my_param': 'Parameter I passed in'},
+    dag=dag)
+
+t2.set_upstream(t1)
+t3.set_upstream(t1)
+```
+
+## Start Service
+```bash
+# airflow needs a home, ~/airflow is the default,
+# but you can lay foundation somewhere else if you prefer
+# (optional)
+export AIRFLOW_HOME=~/airflow
+
+# install from pypi using pip
+pip install apache-airflow
+
+# initialize the database
+airflow initdb
+
+# start the web server, default port is 8080
+airflow webserver -p 8080
+
+# start the scheduler
+airflow scheduler
+
+# visit localhost:8080 in the browser and enable the example dag in the home page
+```
+
+## Tests
+## DAG
+- First check that DAG file contains valid Python code
+```bash
+python3 airflow/dags/airflow_tutorial.py
+```
+
+- Verifique se a DAG já consta na lista de DAG 
+```bash
+airflow list_dags
+
+# -------------------------------------------------------------------
+# DAGS
+# -------------------------------------------------------------------
+# dag_test_bash_python
+# example_bash_operator
+# example_branch_dop_operator_v3
+# example_branch_operator
+# example_http_operator
+# example_passing_params_via_test_command
+# example_pig_operator
+# example_python_operator
+# example_short_circuit_operator
+# example_skip_dag
+# example_subdag_operator
+# example_subdag_operator.section-1
+# example_subdag_operator.section-2
+# example_trigger_controller_dag
+# example_trigger_target_dag
+# example_xcom
+# latest_only
+# latest_only_with_trigger
+# test_utils
+# tutorial
+```
+
+### Task
+Test each task using `airflow test`
+```bash
+airflow run example_bash_operator runme_0 2015-01-01
+```
+
+
+
+
+
+
+
+
+
 
 ## catchup
 O catchup é um atributo de uma DAG para garantir que orquestração dos jobs nos horários corretos
