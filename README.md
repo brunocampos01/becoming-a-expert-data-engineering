@@ -220,7 +220,7 @@ airflow scheduler
 # visit localhost:8080 in the browser and enable the example dag in the home page
 ```
 
-## Tests
+## Validations and Tests
 ## DAG
 - First check that DAG file contains valid Python code
 ```bash
@@ -256,10 +256,16 @@ airflow list_dags
 # tutorial
 ```
 
-### Task
+- Show the hierarchy of task in DAG
+```bash
+# prints the hierarchy of tasks in the tutorial DAG
+airflow list_tasks tutorial --tree
+```
+
+### Tasks
 Test each task using `airflow test`
 ```bash
-airflow run example_bash_operator runme_0 2015-01-01
+airflow test example_bash_operator runme_0 2015-01-01
 ```
 
 
